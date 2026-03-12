@@ -22,6 +22,7 @@ export interface RawRow {
   supplier_sku?: string | null
   cost_price?: number | null
   unit?: string | null
+  colour?: string | null
   [key: string]: unknown
 }
 
@@ -131,7 +132,7 @@ export function processRow(raw: RawRow, ctx: PipelineContext): ProcessedRow {
     cleaned, ctx.materials, ctx.supplierPrimaryMaterial
   )
   const finish = detectFinish(cleaned)
-  const colour = detectColour(cleaned)
+  const colour = raw.colour?.trim() || detectColour(cleaned)
   const unit = detectUnit(cleaned, ctx.purchaseUnits)
   const pack_qty = extractPackQty(cleaned)
   const category = mapCategory(cleaned, null, ctx.categories)

@@ -53,12 +53,30 @@ function formatDims(row: ReviewRow): string {
 
 // ── Sub-components ───────────────────────────────────────────────────────────
 
-function StatCard({ label, value, style }: { label: string; value: number; style?: React.CSSProperties }) {
+function StatCard({
+  label, value, style, active, onClick,
+}: {
+  label: string
+  value: number
+  style?: React.CSSProperties
+  active?: boolean
+  onClick?: () => void
+}) {
   return (
-    <div className="border rounded-lg p-4" style={{ backgroundColor: '#FFFFFF', borderColor: '#E2D9CC' }}>
-      <p className="text-xs uppercase tracking-wider" style={{ color: '#9E9E9E' }}>{label}</p>
+    <button
+      onClick={onClick}
+      className="border rounded-lg p-4 text-left w-full transition-colors"
+      style={{
+        backgroundColor: active ? 'rgba(27,67,50,0.06)' : '#FFFFFF',
+        borderColor: active ? '#1B4332' : '#E2D9CC',
+        outline: 'none',
+        cursor: onClick ? 'pointer' : 'default',
+        boxShadow: active ? 'inset 0 0 0 1px #1B4332' : 'none',
+      }}
+    >
+      <p className="text-xs uppercase tracking-wider" style={{ color: active ? '#1B4332' : '#9E9E9E' }}>{label}</p>
       <p className="text-3xl font-bold mt-1" style={style ?? { color: '#1A1A1A' }}>{value.toLocaleString()}</p>
-    </div>
+    </button>
   )
 }
 
@@ -262,12 +280,15 @@ export function ReviewTable({
   const [saving, setSaving] = useState<Set<string>>(new Set())
   const [flashGreen, setFlashGreen] = useState<Set<string>>(new Set())
   const [promoting, setPromoting] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
 
-  // Sort: needs_review → ready → promoted
-  const sortedRows = [...rows].sort((a, b) => {
-    const order: Record<string, number> = { needs_review: 0, ready: 1, promoted: 2 }
-    return (order[a.row_status] ?? 3) - (order[b.row_status] ?? 3)
-  })
+  // Sort: needs_review → ready → promoted, then apply status filter
+  const sortedRows = [...rows]
+    .sort((a, b) => {
+      const order: Record<string, number> = { needs_review: 0, ready: 1, promoted: 2 }
+      return (order[a.row_status] ?? 3) - (order[b.row_status] ?? 3)
+    })
+    .filter(r => !statusFilter || statusFilter === 'ignored' ? !statusFilter : r.row_status === statusFilter)
 
   const materialOptions: Option[] = materials.map(m => ({ value: m.name, label: m.name.replace(/_/g, ' ') }))
   const categoryOptions: Option[] = categories.map(c => ({ value: c.name, label: c.name.replace(/_/g, ' ') }))
@@ -333,11 +354,24 @@ export function ReviewTable({
     <div className="space-y-6">
       {/* Stat cards */}
       <div className="grid grid-cols-4 gap-4">
-        <StatCard label="Total rows" value={counts.total} />
-        <StatCard label="Ready" value={counts.ready} style={{ color: '#2D6A4F' }} />
-        <StatCard label="Needs review" value={counts.needs_review} style={{ color: '#B45309' }} />
-        <StatCard label="Ignored" value={counts.ignored} style={{ color: '#9E9E9E' }} />
+        <StatCard label="Total rows" value={counts.total}
+          active={statusFilter === null}
+          onClick={() => setStatusFilter(null)} />
+        <StatCard label="Ready" value={counts.ready} style={{ color: '#2D6A4F' }}
+          active={statusFilter === 'ready'}
+          onClick={() => setStatusFilter(prev => prev === 'ready' ? null : 'ready')} />
+        <StatCard label="Needs review" value={counts.needs_review} style={{ color: '#B45309' }}
+          active={statusFilter === 'needs_review'}
+          onClick={() => setStatusFilter(prev => prev === 'needs_review' ? null : 'needs_review')} />
+        <StatCard label="Ignored" value={counts.ignored} style={{ color: '#9E9E9E' }}
+          active={statusFilter === 'ignored'}
+          onClick={() => setStatusFilter(prev => prev === 'ignored' ? null : 'ignored')} />
       </div>
+      {statusFilter === 'ignored' && (
+        <p className="text-sm" style={{ color: '#9E9E9E' }}>
+          Ignored rows are not loaded in the review view.
+        </p>
+      )}
 
       {/* Promote action */}
       {importStatus !== 'complete' && counts.ready > 0 && (

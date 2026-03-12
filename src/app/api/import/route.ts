@@ -69,18 +69,21 @@ function normaliseRow(row: Record<string, unknown>): RawRow {
   }
 
   const description =
-    get('description', 'product_description', 'item_description', 'name', 'product', 'item', 'desc') ||
+    get('description', 'product_description', 'item_description', 'name', 'product', 'product_/_group_name', 'desc') ||
     Object.values(row).find(v => v && String(v).length > 5)?.toString() || ''
 
-  const costRaw = get('cost_price', 'cost', 'price', 'unit_price', 'buy_price', 'nett', 'net_price', 'ex_gst', 'excl_gst')
+  const costRaw = get('cost_price', 'cost', 'price', 'unit_price', 'buy_price', 'nett', 'net_price', 'ex_gst', 'excl_gst', 'amount_in_transaction_currency')
   const cost_price = costRaw ? parseFloat(costRaw.replace(/[$,]/g, '')) : null
 
+  const colour = get('colour_name', 'color_name', 'colour', 'color') || undefined
+
   return {
+    ...row,
     description,
-    supplier_sku: get('sku', 'supplier_sku', 'code', 'item_code', 'product_code', 'part_no', 'part_number') || null,
+    supplier_sku: get('sku', 'supplier_sku', 'code', 'item_code', 'product_code', 'part_no', 'part_number', 'item') || null,
     cost_price: isNaN(cost_price as number) ? null : cost_price,
     unit: get('unit', 'uom', 'unit_of_measure', 'sell_unit') || null,
-    ...row,
+    ...(colour ? { colour } : {}),
   }
 }
 
